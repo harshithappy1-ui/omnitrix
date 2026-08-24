@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OMNITRIX — Galvanic Interface</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+:root{--bg:#040705;--bg-card:rgba(9,20,14,.85);--line:#163826;--fg:#EAF5EE;--muted:#729482;--green:#00FF55;--green-glow:#39FF6A;--green-dim:#0E6B2E;--gold:#FFD700;--red:#FF3E3E;--display:'Orbitron',sans-serif;--sans:'Rajdhani',sans-serif;--mono:'IBM Plex Mono',monospace}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-weight:500;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.scanlines{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:.07;background:repeating-linear-gradient(0deg,#fff 0,transparent 1px,transparent 3px)}
+.vignette{position:fixed;inset:0;z-index:4;pointer-events:none;background:radial-gradient(ellipse 80% 70% at 50% 35%,transparent 35%,rgba(0,0,0,.85) 100%)}
+#flashCanvas{position:fixed;inset:0;z-index:50;pointer-events:none}
+#particleCanvas{position:fixed;inset:0;z-index:49;pointer-events:none}
+nav{position:relative;z-index:6;display:flex;justify-content:space-between;align-items:center;max-width:1200px;margin:0 auto;padding:24px 28px 0;font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.08em}
+nav .brand{color:var(--green);display:flex;align-items:center;gap:10px;font-weight:600}.brand:before{content:'';width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.4s ease-in-out infinite}
+.owner-badge{color:var(--gold);border:1px solid rgba(255,215,0,.35);padding:4px 10px;border-radius:4px;background:rgba(255,215,0,.08);text-shadow:0 0 8px rgba(255,215,0,.5)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+.wrap{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 28px}
+.hero{min-height:94vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 0}
+.eyebrow{font-family:var(--mono);font-size:11.5px;color:var(--green);letter-spacing:.25em;text-transform:uppercase;margin-bottom:10px}
+.user-lock{font-family:var(--mono);font-size:13px;color:var(--gold);letter-spacing:.15em;text-transform:uppercase;margin-bottom:14px;text-shadow:0 0 10px rgba(255,215,0,.6)}
+.title{font-family:var(--display);font-weight:900;font-size:clamp(42px,8vw,78px);letter-spacing:.06em;margin:0 0 6px;background:linear-gradient(180deg,#fff 20%,var(--green-glow) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 35px rgba(57,255,106,.3))}
+.subtitle{color:var(--muted);font-size:15px;letter-spacing:.04em;margin-bottom:36px;max-width:65ch}
+.dial-stage{position:relative;width:300px;height:300px;margin-bottom:34px;user-select:none}
+.dial-outer{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 35% 30%,#202b25,#080a09 80%);border:3px solid #234734;box-shadow:0 0 50px rgba(57,255,106,.15),inset 0 0 35px rgba(0,0,0,.8);transition:transform .5s cubic-bezier(.34,1.56,.64,1)}
+.dial-ring{position:absolute;inset:12px;border-radius:50%;border:2px dashed #1B452B;animation:spin-slow 35s linear infinite}
+@keyframes spin-slow{to{transform:rotate(360deg)}}
+.tick{position:absolute;width:2px;height:12px;background:var(--green-dim);left:50%;top:6px;transform-origin:50% 138px}
+.dial-core{position:absolute;inset:48px;border-radius:50%;background:#020503;border:3px solid var(--green);cursor:pointer;box-shadow:0 0 35px rgba(0,255,85,.4),inset 0 0 20px rgba(0,0,0,.9);transition:transform .45s cubic-bezier(.34,1.56,.64,1),box-shadow .3s,border-color .3s;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.dial-core:hover{box-shadow:0 0 55px rgba(0,255,85,.7),inset 0 0 10px rgba(0,0,0,.6)}.dial-core:active{transform:scale(.92)}
+.core-display-img{width:78%;height:78%;object-fit:contain;filter:drop-shadow(0 0 10px rgba(0,255,85,.8));transition:opacity .2s,transform .45s cubic-bezier(.34,1.56,.64,1),filter .3s}
+.dial-core.active{animation:core-pop .6s cubic-bezier(.16,1,.3,1)}
+@keyframes core-pop{0%{box-shadow:0 0 20px var(--green)}50%{box-shadow:0 0 100px var(--green);transform:scale(1.06)}100%{box-shadow:0 0 35px var(--green);transform:scale(1)}}
+.dial-core.slam{animation:slam .65s cubic-bezier(.16,1,.3,1)}
+@keyframes slam{0%{transform:scale(1)}25%{transform:scale(.82) rotate(-5deg)}55%{transform:scale(1.16) rotate(3deg);box-shadow:0 0 120px var(--green)}100%{transform:scale(1)}}
+.readout{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--green);letter-spacing:.12em;min-height:24px;text-shadow:0 0 10px rgba(57,255,106,.7);margin-bottom:4px}.readout .prompt{color:var(--muted);margin-right:6px}
+.dial-controls,.action-controls{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center}
+.ctrl-btn,.activate-btn,.deactivate-btn{border-radius:6px;font-family:var(--mono);cursor:pointer;transition:all .25s ease}
+.ctrl-btn{padding:10px 22px;border:1px solid var(--line);background:rgba(22,56,38,.35);color:var(--fg);font-size:12px;letter-spacing:.12em}.ctrl-btn:hover{background:rgba(57,255,106,.12);border-color:var(--green);color:var(--green)}
+.activate-btn{padding:14px 34px;border:1px solid var(--green);background:rgba(14,107,46,.2);color:var(--green);font-size:12.5px;font-weight:600;letter-spacing:.18em;box-shadow:0 0 20px rgba(57,255,106,.15)}.activate-btn:hover{background:rgba(57,255,106,.15);box-shadow:0 0 30px rgba(57,255,106,.4);transform:translateY(-2px)}
+.deactivate-btn{padding:14px 28px;border:1px solid rgba(255,62,62,.6);background:rgba(255,62,62,.1);color:var(--red);font-size:12.5px;font-weight:600;letter-spacing:.18em;box-shadow:0 0 16px rgba(255,62,62,.15)}.deactivate-btn:hover{background:rgba(255,62,62,.2);border-color:var(--red);box-shadow:0 0 26px rgba(255,62,62,.4);transform:translateY(-2px)}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+section{padding:90px 0;border-top:1px solid var(--line)}.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1)}.reveal.in{opacity:1;transform:translateY(0)}.reveal.d1{transition-delay:.1s}.reveal.d2{transition-delay:.2s}
+.kicker{font-family:var(--mono);font-size:12px;color:var(--green);letter-spacing:.16em;text-transform:uppercase;margin-bottom:12px}h2{font-family:var(--display);font-weight:700;font-size:clamp(26px,3.5vw,36px);letter-spacing:.02em;margin:0 0 14px}.lede{color:var(--muted);font-size:15.5px;line-height:1.6;max-width:58ch;margin:0 0 44px}
+.agrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}@media(max-width:960px){.agrid{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.agrid{grid-template-columns:1fr;max-width:440px;margin:0 auto}}
+.acard{background:var(--bg-card);border:1px solid var(--line);border-radius:14px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;cursor:pointer;transition:all .3s;text-align:center;position:relative;overflow:hidden;backdrop-filter:blur(6px)}
+.acard:before{content:'';position:absolute;inset:0;opacity:0;background:radial-gradient(circle at 50% 30%,var(--card-accent,#39FF6A),transparent 70%);mix-blend-mode:screen;transition:opacity .3s;pointer-events:none}.acard:hover{transform:translateY(-6px);border-color:var(--card-accent,#39FF6A);box-shadow:0 10px 30px rgba(0,0,0,.5)}.acard:hover:before{opacity:.18}.acard.selected{border-color:var(--card-accent,#39FF6A);background:linear-gradient(180deg,rgba(20,38,28,.9),rgba(10,20,15,.95));box-shadow:0 0 25px rgba(57,255,106,.25),inset 0 0 0 1px var(--card-accent,#39FF6A)}.acard.selected:before{opacity:.25}
+.aicon{width:150px;height:160px;display:flex;align-items:center;justify-content:center;position:relative;z-index:1}.aicon img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(0,0,0,.8));transition:transform .3s,filter .3s}.acard:hover .aicon img{transform:scale(1.08);filter:drop-shadow(0 0 14px var(--card-accent,#39FF6A))}
+.aname{font-family:var(--display);font-size:15px;font-weight:700;letter-spacing:.08em;z-index:1}.aspecies{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;z-index:1}.adesc{font-size:13px;color:#A7BDB2;line-height:1.45;margin:0;z-index:1}
+.lore-panel{border:1px solid var(--line);border-radius:14px;background:var(--bg-card);padding:36px 32px;position:relative;overflow:hidden}.lore-panel:before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--green);box-shadow:0 0 14px var(--green)}.lore-panel p{color:#C5D8CD;font-size:15px;line-height:1.75;margin:0 0 14px}.lore-panel p:last-child{margin-bottom:0}.tag{font-family:var(--mono);font-size:11.5px;color:var(--green);letter-spacing:.12em;margin-bottom:14px;display:block}.highlight-owner{color:var(--gold);font-weight:600;text-shadow:0 0 8px rgba(255,215,0,.4)}
+footer{padding:60px 0 80px;text-align:center}footer p{color:var(--muted);font-size:12px;font-family:var(--mono);letter-spacing:.05em}
+body.transforming{animation:screen-shake .55s cubic-bezier(.36,.07,.19,.97)}@keyframes screen-shake{0%,100%{transform:translate(0)}20%{transform:translate(-4px,2px)}40%{transform:translate(4px,-2px)}60%{transform:translate(-3px,-1px)}80%{transform:translate(3px,2px)}}
+body.powered .dial-core{border-color:var(--green-glow);box-shadow:0 0 55px rgba(0,255,85,.7),inset 0 0 25px rgba(0,255,85,.08)}
+.status-active{color:var(--green-glow)!important}
+@media(max-width:640px){nav{padding-left:16px;padding-right:16px}.wrap{padding:0 16px}.dial-stage{transform:scale(.88);margin-top:-10px;margin-bottom:10px}.subtitle{font-size:14px}.lore-panel{padding:28px 22px}}
+</style>
+</head>
+<body>
+<div class="scanlines"></div><div class="vignette"></div><canvas id="particleCanvas"></canvas><canvas id="flashCanvas"></canvas>
+
+<nav><div class="brand">OMNITRIX INTERFACE</div><div class="owner-badge">WIELDER: HARSHIT</div></nav>
+
+<div class="wrap">
+<section class="hero" style="border:none">
+<div class="eyebrow">Level 20 Chronosapien Tech</div>
+<div class="user-lock">⚔ COSMIC WEAPON OWNER: HARSHIT ⚔</div>
+<h1 class="title">OMNITRIX</h1>
+<p class="subtitle">The universe's most powerful weapon, calibrated and biometrically bound to <strong>Harshit</strong>. Rotate the dial, select a codon sample, and slam down to transform.</p>
+
+<div class="dial-stage" id="dialStage">
+<div class="dial-outer" id="dialOuter"><div class="dial-ring" id="tickRing"></div></div>
+<div class="dial-core" id="dialCore" title="Click to rotate dial"><img class="core-display-img" id="coreImg" src="assets/images/logo.png" alt="Omnitrix Core"></div>
+</div>
+
+<div class="readout"><span class="prompt">DNA PROFILE:</span><span id="readoutText">— STANDBY [HARSHIT AUTHENTICATED] —</span></div>
+<div class="dial-controls"><button class="ctrl-btn" id="prevBtn">◀ PREV</button><button class="ctrl-btn" id="nextBtn">NEXT ▶</button></div>
+<div class="action-controls"><button class="activate-btn" id="activateBtn">⚡ SLAM TO TRANSFORM</button><button class="deactivate-btn" id="deactivateBtn">⏻ DEACTIVATE</button></div>
+</section>
+
+<section><div class="kicker reveal">active codon stream</div><h2 class="reveal d1">Active Alien Playlist</h2><p class="lede reveal d2">Master DNA registry locked to Harshit's neural signature. Ordered from frontline assault forms to ultimate cosmic entities.</p><div class="agrid reveal" id="alienGrid"></div></section>
+
+<section><div class="kicker reveal">classified galactic dossier</div><h2 class="reveal d1">Omnitrix Field Analysis & Wielder Profile</h2><div class="lore-panel reveal d2"><span class="tag">SYSTEM_LOG // WIELDER DESIGNATION: HARSHIT</span><p>The Omnitrix stands as the most formidable and sophisticated weapon throughout the known universe. Created with Level 20 Galvanic technology, it houses over one million sapient genetic matrices within its active codon stream.</p><p>The device is permanently biometrically locked to <span class="highlight-owner">Harshit</span>. In Harshit's command, the watch adapts to real-time battlefield conditions, granting instant tactical cellular evolution ranging from plasma fire manipulation to ultimate reality warping.</p><p>Emergency protocols and ultimate powers remain under Harshit's exclusive authority, making him the universe's ultimate defense against cataclysmic threats.</p></div></section>
+<footer><p>UNIVERSAL DEFENSE MATRIX · EXCLUSIVELY WIELDED BY HARSHIT</p></footer>
+</div>
+
+<script>
+/* ================= AUDIO ================= */
+let audioCtx=null;
+function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume()}
+function tone(type,startFreq,endFreq,duration,volume=.2){
+  initAudio();const now=audioCtx.currentTime,osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+  osc.type=type;osc.frequency.setValueAtTime(startFreq,now);osc.frequency.exponentialRampToValueAtTime(Math.max(1,endFreq),now+duration);
+  gain.gain.setValueAtTime(volume,now);gain.gain.exponentialRampToValueAtTime(.001,now+duration);osc.connect(gain);gain.connect(audioCtx.destination);osc.start(now);osc.stop(now+duration);
+}
+function playDialSound(){tone('sine',800,1400,.08,.25)}
+function playScanSound(){initAudio();const now=audioCtx.currentTime;[0,1,2,3,4].forEach(i=>{const osc=audioCtx.createOscillator(),g=audioCtx.createGain();osc.type='square';osc.frequency.setValueAtTime(500+i*170,now+i*.055);g.gain.setValueAtTime(.0001,now+i*.055);g.gain.exponentialRampToValueAtTime(.16,now+i*.055+.012);g.gain.exponentialRampToValueAtTime(.001,now+i*.055+.075);osc.connect(g);g.connect(audioCtx.destination);osc.start(now+i*.055);osc.stop(now+i*.055+.08)})}
+function playTransformSound(){initAudio();const now=audioCtx.currentTime;
+  tone('triangle',160,30,.5,.7);tone('sawtooth',300,1800,.4,.35);
+  const osc=audioCtx.createOscillator(),g=audioCtx.createGain();osc.type='sine';osc.frequency.setValueAtTime(120,now+.25);osc.frequency.exponentialRampToValueAtTime(900,now+.7);g.gain.setValueAtTime(.001,now+.25);g.gain.exponentialRampToValueAtTime(.3,now+.42);g.gain.exponentialRampToValueAtTime(.001,now+.72);osc.connect(g);g.connect(audioCtx.destination);osc.start(now+.25);osc.stop(now+.75)
+}
+function playDeactivateSound(){tone('sawtooth',900,180,.4,.35)}
+
+/* ================= DATA ================= */
+const aliens=[
+{name:'HEATBLAST',species:'Pyronite · Pyros',color:'#FF6B00',image:'assets/images/Heatblast.png',desc:'Plasma-based entity capable of generating extreme heat, fire blasts, and propelled magma slabs.'},
+{name:'DIAMONDHEAD',species:'Petrosapien · Petropia',color:'#4EF5C3',image:'assets/images/diamondhead.png',desc:'Silicon crystal organism impervious to physical attacks, capable of crystal construct manipulation.'},
+{name:'FOUR ARMS',species:'Tetramand · Khoros',color:'#FF3838',image:'assets/images/forearms-Photoroom.png',desc:'Colossal four-armed juggernaut with superhuman density, immense brute strength, and sonic shockwaves.'},
+{name:'GREY MATTER',species:'Galvan · Galvan Prime',color:'#89E28B',image:'assets/images/greymatter-Photoroom.png',desc:'Micro-sized super-genius capable of calculating technical schematics and fixing any device instantly.'},
+{name:'SHOCKSQUATCH',species:'Gimlinopithecus · Pattersonea',color:'#FFE24A',image:'assets/images/shocksquach.png',desc:'Massive durable powerhouse delivering devastating high-voltage electro-kinesis and seismic force.'},
+{name:'HUMUNGOUSAUR',species:'Vaxasaurian · Terradino',color:'#E09C47',image:'assets/images/humangasaur.png',desc:'Massive dinosaurian powerhouse with armored hide and dynamic bio-mass size augmentation.'},
+{name:'JETRAY',species:'Aerophibian · Aeropela',color:'#FF2E55',image:'assets/images/jetray.png',desc:'High-velocity flyer traveling faster than sound and through hyperspace while firing neuroshock beams.'},
+{name:'SWAMPFIRE',species:'Methanosian · Methanos',color:'#7FFF00',image:'assets/images/swarmfire-Photoroom.png',desc:'Plant-methane hybrid capable of rapid cellular regeneration and continuous pyrokinesis.'},
+{name:'ECHO ECHO',species:'Sonorosian · Sonorosia',color:'#E8F5EE',image:'assets/images/echo_echo.png',desc:'Living sound resonance contained in a suit; creates sonic vibrations and infinite duplicates.'},
+{name:'ALIEN X',species:'Celestialsapien · Forge of Creation',color:'#A080FF',image:'assets/images/alien-x.png',desc:'Omnipotent reality-warping entity with complete control over space, time, and cosmic matter.'}
+];
+
+/* ================= DOM ================= */
+const tickRing=document.getElementById('tickRing'),grid=document.getElementById('alienGrid'),readout=document.getElementById('readoutText'),dialCore=document.getElementById('dialCore'),coreImg=document.getElementById('coreImg'),dialOuter=document.getElementById('dialOuter'),activateBtn=document.getElementById('activateBtn'),deactivateBtn=document.getElementById('deactivateBtn');
+for(let i=0;i<24;i++){const t=document.createElement('div');t.className='tick';t.style.transform=`rotate(${i*15}deg)`;tickRing.appendChild(t)}
+
+let currentIndex=-1,rotationDeg=0,isTransformed=false,isBusy=false;
+const cards=[];
+
+aliens.forEach((alien,i)=>{
+ const card=document.createElement('div');card.className='acard';card.style.setProperty('--card-accent',alien.color);
+ card.innerHTML=`<div class="aicon"><img src="${alien.image}" alt="${alien.name}" loading="lazy"></div><div class="aname">${alien.name}</div><div class="aspecies">${alien.species}</div><p class="adesc">${alien.desc}</p>`;
+ card.addEventListener('click',()=>selectAlien(i,1));grid.appendChild(card);cards.push(card);
+ const img=card.querySelector('img');
+ img.addEventListener('error',()=>{img.alt=`${alien.name} image missing`;img.style.opacity='.25'});
+});
+
+function selectAlien(index,direction=1){
+ if(isBusy||isTransformed)return;
+ playDialSound();currentIndex=(index+aliens.length)%aliens.length;
+ rotationDeg+=direction*36;dialOuter.style.transform=`rotate(${rotationDeg}deg)`;
+ cards.forEach(c=>c.classList.remove('selected'));cards[currentIndex].classList.add('selected');
+ const alien=aliens[currentIndex];
+ readout.innerHTML=`<span class="prompt">DNA PROFILE:</span>${alien.name} · ${alien.species}`;
+ readout.style.color=alien.color;readout.classList.remove('status-active');
+ coreImg.style.opacity='0';
+ setTimeout(()=>{coreImg.src=alien.image;coreImg.alt=alien.name;coreImg.style.opacity='1';coreImg.style.filter=`drop-shadow(0 0 16px ${alien.color})`},140);
+ dialCore.style.borderColor=alien.color;
+ dialCore.style.boxShadow=`0 0 35px ${alien.color}88,inset 0 0 20px rgba(0,0,0,.9)`;
+ dialCore.classList.remove('active');void dialCore.offsetWidth;dialCore.classList.add('active');
+}
+
+function selectNext(){selectAlien(currentIndex<0?0:currentIndex+1,1)}
+function selectPrev(){selectAlien(currentIndex<0?aliens.length-1:currentIndex-1,-1)}
+
+function transform(){
+ if(isBusy||isTransformed||currentIndex<0){if(currentIndex<0){readout.innerHTML='<span class="prompt">SYSTEM:</span> SELECT A DNA PROFILE FIRST';return}return}
+ isBusy=true;document.body.classList.add('transforming');playScanSound();dialCore.classList.remove('slam');void dialCore.offsetWidth;dialCore.classList.add('slam');
+ createBurst();flash('#39FF6A',.72);setTimeout(playTransformSound,120);
+ readout.innerHTML='<span class="prompt">DNA PROFILE:</span> SYNCING CELLULAR MATRIX...';
+ activateBtn.disabled=true;deactivateBtn.disabled=true;
+ setTimeout(()=>{
+  isTransformed=true;isBusy=false;document.body.classList.remove('transforming');document.body.classList.add('powered');
+  const a=aliens[currentIndex];readout.innerHTML=`<span class="prompt">TRANSFORMED:</span>${a.name} · DNA LOCKED`;readout.classList.add('status-active');
+  activateBtn.textContent='✓ TRANSFORMATION ACTIVE';deactivateBtn.disabled=false;createBurst(120);
+ },650);
+}
+
+function deactivate(){
+ if(isBusy||!isTransformed)return;
+ isBusy=true;playDeactivateSound();flash('#FF3E3E',.35);createBurst(55,'#FF3E3E');
+ dialCore.classList.remove('slam');coreImg.style.transform='scale(.5)';coreImg.style.opacity='.15';
+ setTimeout(()=>{
+  isTransformed=false;isBusy=false;document.body.classList.remove('powered');
+  const a=aliens[currentIndex];readout.innerHTML=`<span class="prompt">DNA PROFILE:</span>${a.name} · STANDBY`;
+  readout.classList.remove('status-active');activateBtn.disabled=false;activateBtn.textContent='⚡ SLAM TO TRANSFORM';deactivateBtn.disabled=true;
+  coreImg.style.transform='scale(1)';coreImg.style.opacity='1';coreImg.style.filter=`drop-shadow(0 0 16px ${a.color})`;
+ },450);
+}
+
+/* ================= VISUAL FX ================= */
+const flashCanvas=document.getElementById('flashCanvas'),fctx=flashCanvas.getContext('2d'),particleCanvas=document.getElementById('particleCanvas'),pctx=particleCanvas.getContext('2d');
+let particles=[];
+function resizeCanvas(){flashCanvas.width=particleCanvas.width=innerWidth;flashCanvas.height=particleCanvas.height=innerHeight}addEventListener('resize',resizeCanvas);resizeCanvas();
+function flash(color,peak=.5){const start=performance.now();const duration=420;function frame(t){const p=Math.min(1,(t-start)/duration),a=(1-p)*peak;fctx.clearRect(0,0,flashCanvas.width,flashCanvas.height);fctx.fillStyle=color;fctx.globalAlpha=a;fctx.fillRect(0,0,flashCanvas.width,flashCanvas.height);fctx.globalAlpha=1;if(p<1)requestAnimationFrame(frame);else fctx.clearRect(0,0,flashCanvas.width,flashCanvas.height)}requestAnimationFrame(frame)}
+function createBurst(count=90,color=null){
+ const rect=dialCore.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+ const c=color||(currentIndex>=0?aliens[currentIndex].color:'#39FF6A');
+ for(let i=0;i<count;i++){const angle=Math.random()*Math.PI*2,speed=2+Math.random()*8;particles.push({x:cx,y:cy,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,life:1,size:1+Math.random()*3,color:c})}
+}
+function animateParticles(){
+ pctx.clearRect(0,0,particleCanvas.width,particleCanvas.height);
+ particles=particles.filter(p=>p.life>0);
+ for(const p of particles){p.x+=p.vx;p.y+=p.vy;p.vx*=.985;p.vy*=.985;p.life-=.018;pctx.globalAlpha=Math.max(0,p.life);pctx.fillStyle=p.color;pctx.shadowBlur=14;pctx.shadowColor=p.color;pctx.beginPath();pctx.arc(p.x,p.y,p.size,0,Math.PI*2);pctx.fill()}
+ pctx.globalAlpha=1;pctx.shadowBlur=0;requestAnimationFrame(animateParticles)
+}animateParticles();
+
+/* ================= EVENTS ================= */
+document.getElementById('nextBtn').addEventListener('click',selectNext);
+document.getElementById('prevBtn').addEventListener('click',selectPrev);
+activateBtn.addEventListener('click',transform);
+deactivateBtn.addEventListener('click',deactivate);
+dialCore.addEventListener('click',selectNext);
+document.addEventListener('keydown',e=>{
+ if(e.key==='ArrowRight')selectNext();
+ else if(e.key==='ArrowLeft')selectPrev();
+ else if(e.key==='Enter'||e.key===' ')transform();
+ else if(e.key.toLowerCase()==='x')deactivate();
+});
+
+/* ================= REVEAL ================= */
+const revealObserver=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>revealObserver.observe(el));
+
+/* Initial state */
+deactivateBtn.disabled=true;
+</script>
+</body>
+</html>
